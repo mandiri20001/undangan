@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generator Undangan Digital</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    input, textarea, select {
+      display: block;
+      margin-bottom: 10px;
+      width: 100%;
+      padding: 8px;
+    }
+    label {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Generator Undangan Digital</h1>
+  <form id="form">
+    <label>Nama Pengantin Pria</label>
+    <input type="text" id="pria" required>
+
+    <label>Nama Pengantin Wanita</label>
+    <input type="text" id="wanita" required>
+
+    <label>Tanggal & Waktu Acara</label>
+    <input type="text" id="tanggal" placeholder="Contoh: Sabtu, 20 Juli 2025 - 10:00 WIB" required>
+
+    <label>Lokasi Acara</label>
+    <input type="text" id="lokasi" required>
+
+    <label>Link Google Maps</label>
+    <input type="text" id="maps" required>
+
+    <label>Cerita Singkat</label>
+    <textarea id="cerita"></textarea>
+
+    <label>Upload Musik Latar (opsional)</label>
+    <input type="file" id="musik" accept="audio/*">
+
+    <label>Pilih Tema</label>
+    <select id="tema">
+      <option value="floral">Floral</option>
+      <option value="minimalis">Minimalis</option>
+    </select>
+
+    <label>Upload 3–6 Foto Galeri</label>
+    <input type="file" id="galeri" multiple accept="image/*">
+
+    <button type="submit">Generate Undangan ZIP</button>
+  </form>
+
+  <script>
+    document.getElementById('form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const pria = document.getElementById('pria').value;
+      const wanita = document.getElementById('wanita').value;
+      const tanggal = document.getElementById('tanggal').value;
+      const lokasi = document.getElementById('lokasi').value;
+      const maps = document.getElementById('maps').value;
+      const cerita = document.getElementById('cerita').value;
+      const tema = document.getElementById('tema').value;
+      const musikFile = document.getElementById('musik').files[0];
+      const galeriFiles = document.getElementById('galeri').files;
+
+      const zip = new JSZip();
+
+      // HTML dasar dengan placeholder
+      const htmlContent = `<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Undangan Pernikahan ${pria} & ${wanita}</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>${pria} & ${wanita}</h1>
+  <p>${tanggal}</p>
+  <p>${lokasi}</p>
+  <p><a href="${maps}" target="_blank">Lihat Lokasi</a></p>
+  <p>${cerita}</p>
+  <div class="galeri">
+    ${[...galeriFiles].map((f, i) => `<img src="galeri/foto${i+1}.${f.name.split('.').pop()}">`).join('\n')}
+  </div>
+  ${musikFile ? `<audio controls autoplay loop src="musik/${musikFile.name}"></audio>` : ''}
+</body>
+</html>`;
+
+      zip.file("undangan.html", htmlContent);
+
+      // CSS dasar berdasarkan tema
+      const cssContent = tema === 'floral'
+        ? `body { background: #fff0f5; font-family: Georgia; padding: 2rem; }
+          h1 { color: darkgreen; }
+          img { max-width: 100px; margin: 5px; }`
+        : `body { background: #f4f4f4; font-family: sans-serif; padding: 2rem; }
+          h1 { color: #333; }
+          img { max-width: 100px; margin: 5px; }`;
+
+      zip.file("style.css", cssContent);
+
+      // Simpan musik jika ada
+      if (musikFile) {
+        const musikData = await musikFile.arrayBuffer();
+        zip.folder("musik").file(musikFile.name, musikData);
+      }
+
+      // Simpan foto galeri
+      const galeriFolder = zip.folder("galeri");
+      for (let i = 0; i < galeriFiles.length; i++) {
+        const file = galeriFiles[i];
+        const imgData = await file.arrayBuffer();
+        galeriFolder.file(`foto${i+1}.${file.name.split('.').pop()}`, imgData);
+      }
+
+      // Generate ZIP file
+      zip.generateAsync({ type: "blob" })
+        .then(function(content) {
+          saveAs(content, "undangan_digital.zip");
+        });
+    });
+  </script>
+</body>
+</html>
